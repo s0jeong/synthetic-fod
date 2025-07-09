@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOD 합성 데이터 생성 도구</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .controls {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-weight: bold;
+            font-size: 12px;
+            color: #666;
+        }
+        select, button, input[type="range"], input[type="file"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .clear-btn {
+            background: #e74c3c;
+        }
+        .clear-btn:hover {
+            background: #c0392b;
+        }
+        .upload-btn {
+            background: #27ae60;
+        }
+        .upload-btn:hover {
+            background: #219a52;
+        }
+        .canvas-container {
+            position: relative;
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        canvas {
+            max-width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: crosshair;
+        }
+        .stats {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+        .fod-count {
+            display: inline-block;
+            margin-right: 20px;
+            padding: 5px 10px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .size-display {
+            font-size: 12px;
+            color: #666;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            margin: 20px;
+        }
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        .fod-upload-area {
+            border: 2px dashed #27ae60;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            background: #f0fff4;
+            margin: 20px;
+        }
+        .fod-upload-area.dragover {
+            border-color: #219a52;
+            background: #e8f5e8;
+        }
+        #imageInput, #fodImageInput {
+            display: none;
+        }
+        .fod-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .fod-item {
+            position: relative;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+        .fod-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        .fod-item.selected {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        .fod-item img {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 4px;
+        }
+        .fod-item .name {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #666;
+        }
+        .fod-item .delete-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+        }
+        .fod-item:hover .delete-btn {
+            display: block;
+        }
+        .quality-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .quality-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FOD 합성 데이터 생성 도구</h1>
+            <p>실제 도로 이미지 위에 실제 FOD 이미지를 배치하여 학습 데이터를 생성하세요</p>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <h3>도로 이미지 업로드</h3>
+            <p>배경으로 사용할 도로 이미지를 드래그 앤 드롭하거나 클릭하여 업로드하세요</p>
+            <input type="file" id="imageInput" accept="image/*">
+            <button onclick="document.getElementById('imageInput').click()" class="upload-btn">도로 이미지 선택</button>
+        </div>
+        
+        <div class="fod-upload-area" id="fodUploadArea">
+            <h3>FOD 이미지 업로드</h3>
+            <p>실제 촬영한 FOD 이미지들을 업로드하세요 (여러 개 선택 가능)</p>
+            <input type="file" id="fodImageInput" accept="image/*" multiple>
+            <button onclick="document.getElementById('fodImageInput').click()" class="upload-btn">FOD 이미지 선택</button>
+        </div>
+        
+        <div class="fod-gallery" id="fodGallery">
+            <div style="width: 100%; text-align: center; color: #666; font-style: italic;">
+                업로드된 FOD 이미지가 여기에 표시됩니다
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <strong>사용법:</strong>
+            1. 도로 이미지를 업로드하세요.(배경용)
+            2. 실제 촬영한 FOD 이미지들을 업로드하세요.(box.jpg, box2.jpg → 같은 "box" 클래스로 분류)
+            3. 갤러리에서 배치할 FOD를 선택하세요.
+            4. 크기와 투명도를 조절하세요.
+            5. 도로 이미지 위를 클릭하여 FOD를 배치하세요.
+            6. 우클릭으로 가장 최근에 배치된 객체를 삭제할 수 있습니다.
+            7. <strong>'데이터셋 다운로드'</strong>를 누르면 합성 이미지, YOLO annotation, 클래스 정보가 ZIP 파일로 다운로드됩니다.
+            <br><br>
+            <strong>클래스 자동 분류:</strong>
+            파일명에서 숫자를 제거하여 클래스명을 생성합니다.(box.jpg, box2.jpg, box3.jpg → "box" 클래스)
+            <br><br>
+            <strong>YOLO Annotation:</strong>
+            각 FOD 타입별로 클래스 ID가 자동 할당됩니다. 
+            annotation 파일은 'class_id x_center y_center width height' 형식으로 생성됩니다. 
+            모든 좌표는 이미지 크기에 대한 상대적 비율(0~1)로 정규화됩니다.
+            <br><br>
+            <strong>고화질 개선 사항:</strong>
+            • 원본 이미지 해상도 유지
+            • 고품질 이미지 렌더링 (imageSmoothingEnabled)
+            • PNG 무손실 포맷 지원
+            • 높은 품질 JPEG 압축률 (0.98)
+            • 캔버스 픽셀 비율 최적화
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>선택된 FOD</label>
+                <span id="selectedFodName" style="font-size: 12px; color: #666;">FOD를 선택하세요</span>
+            </div>
+            
+            <div class="control-group">
+                <label>크기 (픽셀)</label>
+                <input type="range" id="sizeSlider" min="10" max="150" value="60">
+                <span class="size-display" id="sizeDisplay">60px</span>
+            </div>
+            
+            <div class="control-group">
+                <label>투명도</label>
+                <input type="range" id="opacitySlider" min="0.7" max="1" step="0.1" value="0.9">
+                <span class="size-display" id="opacityDisplay">90%</span>
+            </div>
+            
+            <div class="control-group">
+                <label>회전</label>
+                <input type="range" id="rotationSlider" min="0" max="360" value="0">
+                <span class="size-display" id="rotationDisplay">0°</span>
+            </div>
+
+            <div class="control-group">
+                <label>출력 형식</label>
+                <select id="outputFormat">
+                    <option value="png">PNG (무손실)</option>
+                    <option value="jpeg">JPEG (고품질)</option>
+                </select>
+                <div class="quality-controls">
+                    <label>JPEG 품질:</label>
+                    <input type="range" id="jpegQuality" min="0.8" max="1.0" step="0.01" value="0.98">
+                    <span class="size-display" id="qualityDisplay">98%</span>
+                </div>
+                <div class="quality-info">PNG: 완전 무손실, 파일 크기 큼<br>JPEG: 고품질, 파일 크기 작음</div>
+            </div>
+            
+            <div class="control-group">
+                <label>작업</label>
+                <button onclick="clearAllFODs()" class="clear-btn">모든 FOD 삭제</button>
+                <button onclick="downloadDataset()">데이터셋 다운로드</button>
+                <button onclick="downloadImage()">이미지만 다운로드</button>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="canvas" width="1000" height="700"></canvas>
+        </div>
+
+        <div class="stats">
+            <div id="fodStats"></div>
+            <div id="classMapping" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const fodImageInput = document.getElementById('fodImageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fodUploadArea = document.getElementById('fodUploadArea');
+        const fodGallery = document.getElementById('fodGallery');
+        const selectedFodName = document.getElementById('selectedFodName');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const rotationSlider = document.getElementById('rotationSlider');
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        const opacityDisplay = document.getElementById('opacityDisplay');
+        const rotationDisplay = document.getElementById('rotationDisplay');
+        const fodStats = document.getElementById('fodStats');
+        const classMapping = document.getElementById('classMapping');
+        const outputFormat = document.getElementById('outputFormat');
+        const jpegQuality = document.getElementById('jpegQuality');
+        const qualityDisplay = document.getElementById('qualityDisplay');
+        
+        let baseImage = null;
+        let originalImageData = null; // 원본 이미지 데이터 저장
+        let fods = [];
+        let fodImages = [];
+        let selectedFodIndex = -1;
+        let fodCounts = {};
+        let classIds = {};
+        let uniqueClasses = {}; // 고유 클래스 저장
+
+        // 고화질 렌더링을 위한 캔버스 설정
+        function setupHighQualityCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            
+            // 물리적 픽셀 크기 설정
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            // CSS 크기 설정
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            // 스케일 조정
+            ctx.scale(dpr, dpr);
+            
+            // 고품질 렌더링 설정
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+        }
+
+        // 파일명에서 클래스명 추출 (숫자 제거)
+        function extractClassName(filename) {
+            // 확장자 제거
+            const nameWithoutExt = filename.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, '');
+            // 숫자 제거 (끝에 있는 숫자들)
+            const className = nameWithoutExt.replace(/\d+$/, '');
+            return className;
+        }
+
+        // 이미지 업로드 이벤트
+        imageInput.addEventListener('change', handleImageUpload);
+        fodImageInput.addEventListener('change', handleFodImageUpload);
+        
+        // 도로 이미지 드래그 앤 드롭
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        });
+
+        // FOD 이미지 드래그 앤 드롭
+        fodUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fodUploadArea.classList.add('dragover');
+        });
+        
+        fodUploadArea.addEventListener('dragleave', () => {
+            fodUploadArea.classList.remove('dragover');
+        });
+        
+        fodUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fodUploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            handleFodImageFiles(files);
+        });
+
+        // 슬라이더 이벤트
+        sizeSlider.addEventListener('input', function() {
+            sizeDisplay.textContent = this.value + 'px';
+        });
+
+        opacitySlider.addEventListener('input', function() {
+            opacityDisplay.textContent = Math.round(this.value * 100) + '%';
+        });
+
+        rotationSlider.addEventListener('input', function() {
+            rotationDisplay.textContent = this.value + '°';
+        });
+
+        jpegQuality.addEventListener('input', function() {
+            qualityDisplay.textContent = Math.round(this.value * 100) + '%';
+        });
+
+        // 출력 형식 변경 이벤트
+        outputFormat.addEventListener('change', function() {
+            const qualityControls = document.querySelector('.quality-controls');
+            if (this.value === 'jpeg') {
+                qualityControls.style.display = 'flex';
+            } else {
+                qualityControls.style.display = 'none';
+            }
+        });
+
+        // 도로 이미지 업로드 처리
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageFile(file);
+            }
+        }
+
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 업로드 가능합니다.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // 원본 이미지 해상도 유지
+                    const originalWidth = img.width;
+                    const originalHeight = img.height;
+                    
+                    // 화면 표시를 위한 최대 크기 제한
+                    const maxDisplayWidth = 1000;
+                    const maxDisplayHeight = 700;
+                    
+                    let displayWidth = originalWidth;
+                    let displayHeight = originalHeight;
+                    
+                    // 화면 표시용 크기 계산 (비율 유지)
+                    if (displayWidth > maxDisplayWidth || displayHeight > maxDisplayHeight) {
+                        const ratio = Math.min(maxDisplayWidth / displayWidth, maxDisplayHeight / displayHeight);
+                        displayWidth = Math.round(displayWidth * ratio);
+                        displayHeight = Math.round(displayHeight * ratio);
+                    }
+                    
+                    // 캔버스 크기를 원본 해상도로 설정
+                    canvas.width = originalWidth;
+                    canvas.height = originalHeight;
+                    
+                    // CSS 크기를 표시용 크기로 설정
+                    canvas.style.width = displayWidth + 'px';
+                    canvas.style.height = displayHeight + 'px';
+                    
+                    // 고품질 렌더링 설정
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    
+                    baseImage = img;
+                    originalImageData = {
+                        width: originalWidth,
+                        height: originalHeight,
+                        displayWidth: displayWidth,
+                        displayHeight: displayHeight,
+                        scaleX: originalWidth / displayWidth,
+                        scaleY: originalHeight / displayHeight
+                    };
+                    
+                    clearAllFODs();
+                    redrawCanvas();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // FOD 이미지 업로드 처리
+        function handleFodImageUpload(e) {
+            const files = Array.from(e.target.files);
+            handleFodImageFiles(files);
+        }
+
+        function handleFodImageFiles(files) {
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) {
+                    alert(`${file.name}은 이미지 파일이 아닙니다.`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const fodId = Date.now() + Math.random();
+                        const className = extractClassName(file.name);
+                        
+                        const fodData = {
+                            id: fodId,
+                            name: file.name,
+                            className: className,
+                            image: img,
+                            src: e.target.result
+                        };
+                        
+                        fodImages.push(fodData);
+                        fodCounts[fodId] = 0;
+                        
+                        // 고유 클래스 저장
+                        if (!uniqueClasses[className]) {
+                            uniqueClasses[className] = Object.keys(uniqueClasses).length;
+                        }
+                        
+                        // 클래스 ID 할당
+                        classIds[fodId] = uniqueClasses[className];
+                        
+                        updateFodGallery();
+                        updateClassMapping();
+                        
+                        // 첫 번째 FOD를 자동 선택
+                        if (fodImages.length === 1) {
+                            selectFod(0);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // FOD 갤러리 업데이트
+        function updateFodGallery() {
+            if (fodImages.length === 0) {
+                fodGallery.innerHTML = '<div style="width: 100%; text-align: center; color: #666; font-style: italic;">업로드된 FOD 이미지가 여기에 표시됩니다</div>';
+                return;
+            }
+
+            fodGallery.innerHTML = '';
+            fodImages.forEach((fodData, index) => {
+                const fodItem = document.createElement('div');
+                fodItem.className = 'fod-item';
+                if (index === selectedFodIndex) {
+                    fodItem.classList.add('selected');
+                }
+                
+                fodItem.innerHTML = `
+                    <img src="${fodData.src}" alt="${fodData.name}">
+                    <div class="name">${fodData.name} (${fodData.className})</div>
+                    <button class="delete-btn" onclick="deleteFodImage(${index})">&times;</button>
+                `;
+                
+                fodItem.addEventListener('click', () => selectFod(index));
+                fodGallery.appendChild(fodItem);
+            });
+        }
+
+        // FOD 선택
+        function selectFod(index) {
+            selectedFodIndex = index;
+            selectedFodName.textContent = `${fodImages[index].name} (${fodImages[index].className})`;
+            updateFodGallery();
+        }
+
+        // FOD 이미지 삭제
+        function deleteFodImage(index) {
+            const fodData = fodImages[index];
+            
+            // 해당 FOD로 배치된 객체들 제거
+            fods = fods.filter(fod => fod.fodId !== fodData.id);
+            
+            // FOD 이미지 목록에서 제거
+            fodImages.splice(index, 1);
+            delete fodCounts[fodData.id];
+            delete classIds[fodData.id];
+            
+            // 고유 클래스 재계산
+            uniqueClasses = {};
+            fodImages.forEach(fodData => {
+                if (!uniqueClasses[fodData.className]) {
+                    uniqueClasses[fodData.className] = Object.keys(uniqueClasses).length;
+                }
+            });
+            
+            // 클래스 ID 재할당
+            fodImages.forEach(fodData => {
+                classIds[fodData.id] = uniqueClasses[fodData.className];
+            });
+            
+            // 선택된 FOD 조정
+            if (selectedFodIndex === index) {
+                selectedFodIndex = fodImages.length > 0 ? 0 : -1;
+                selectedFodName.textContent = selectedFodIndex >= 0 ? 
+                    `${fodImages[selectedFodIndex].name} (${fodImages[selectedFodIndex].className})` : 
+                    'FOD를 선택하세요';
+            } else if (selectedFodIndex > index) {
+                selectedFodIndex--;
+            }
+            
+            updateFodGallery();
+            updateClassMapping();
+            redrawCanvas();
+        }
+
+        // 캔버스 다시 그리기
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 고품질 렌더링 설정
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // 배경 이미지 그리기 (원본 해상도로)
+            if (baseImage) {
+                ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#999';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('도로 이미지를 업로드하세요', canvas.width / 2, canvas.height / 2);
+            }
+            
+            // FOD 그리기
+            fods.forEach(fod => {
+                drawFodImage(fod);
+            });
+            
+            updateStats();
+        }
+
+        // FOD 이미지 그리기 (고품질)
+        function drawFodImage(fod) {
+            const fodData = fodImages.find(f => f.id === fod.fodId);
+            if (!fodData) return;
+            
+            ctx.save();
+            ctx.globalAlpha = fod.opacity;
+            
+            // 고품질 렌더링 설정
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            ctx.translate(fod.x, fod.y);
+            ctx.rotate(fod.rotation * Math.PI / 180);
+            
+            // 부드러운 그림자 효과
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = fod.size * 0.1;
+            ctx.shadowOffsetX = fod.size * 0.05;
+            ctx.shadowOffsetY = fod.size * 0.05;
+            
+            // 이미지 그리기 (고품질 크기 조정)
+            ctx.drawImage(fodData.image, -fod.size/2, -fod.size/2, fod.size, fod.size);
+            
+            ctx.restore();
+        }
+
+        // 마우스 클릭 이벤트 (좌표 변환 개선)
+        canvas.addEventListener('click', function(e) {
+            if (!baseImage) {
+                alert('먼저 도로 이미지를 업로드하세요!');
+                return;
+            }
+            
+            if (selectedFodIndex === -1) {
+                alert('먼저 FOD를 선택하세요!');
+                return;
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            // 실제 캔버스 좌표로 변환 (원본 해상도 기준)
+            const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+            const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+            
+            const size = parseInt(sizeSlider.value) * (originalImageData ? originalImageData.scaleX : 1);
+            const opacity = parseFloat(opacitySlider.value);
+            const rotation = parseInt(rotationSlider.value);
+            const fodId = fodImages[selectedFodIndex].id;
+            
+            const fod = {
+                fodId: fodId,
+                x: x,
+                y: y,
+                size: size,
+                opacity: opacity,
+                rotation: rotation
+            };
+            
+            fods.push(fod);
+            fodCounts[fodId]++;
+            redrawCanvas();
+        });
+
+        // 우클릭으로 삭제
+        canvas.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            if (fods.length > 0) {
+                const removedFod = fods.pop();
+                fodCounts[removedFod.fodId]--;
+                redrawCanvas();
+            }
+        });
+
+        // 모든 FOD 삭제
+        function clearAllFODs() {
+            fods = [];
+            Object.keys(fodCounts).forEach(key => {
+                fodCounts[key] = 0;
+            });
+            redrawCanvas();
+        }
+
+        // 모든 FOD 삭제
+        function clearAllFODs() {
+            fods = [];
+            Object.keys(fodCounts).forEach(key => {
+                fodCounts[key] = 0;
+            });
+            redrawCanvas();
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            const classCounts = {};
+            
+            // 클래스별 개수 계산
+            fodImages.forEach(fodData => {
+                const className = fodData.className;
+                if (!classCounts[className]) {
+                    classCounts[className] = 0;
+                }
+                classCounts[className] += (fodCounts[fodData.id] || 0);
+            });
+            
+            const total = Object.values(classCounts).reduce((sum, count) => sum + count, 0);
+            
+            let statsHtml = `<strong>배치된 FOD 현황 (총 ${total}개):</strong><br>`;
+            
+            Object.keys(classCounts).forEach(className => {
+                const count = classCounts[className];
+                const classId = uniqueClasses[className];
+                statsHtml += `<span class="fod-count">${className} (class ${classId}): ${count}개</span>`;
+            });
+            
+            fodStats.innerHTML = statsHtml;
+        }
+
+        // 클래스 매핑 업데이트
+        function updateClassMapping() {
+            if (Object.keys(uniqueClasses).length === 0) {
+                classMapping.innerHTML = '';
+                return;
+            }
+
+            let mappingHtml = '<strong>YOLO 클래스 매핑:</strong><br>';
+            Object.keys(uniqueClasses).forEach(className => {
+                const classId = uniqueClasses[className];
+                mappingHtml += `클래스 ${classId}: ${className} `;
+            });
+            
+            classMapping.innerHTML = mappingHtml;
+        }
+
+        // YOLO format annotation 생성
+        function generateYOLOAnnotation() {
+            if (!baseImage || fods.length === 0) {
+                return '';
+            }
+
+            const annotations = [];
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+
+            fods.forEach(fod => {
+                const classId = classIds[fod.fodId];
+                
+                // 중심점 좌표 정규화 (0~1)
+                const xCenter = fod.x / imgWidth;
+                const yCenter = fod.y / imgHeight;
+                
+                // 박스 크기 정규화 (0~1)
+                const width = fod.size / imgWidth;
+                const height = fod.size / imgHeight;
+                
+                // YOLO format: class_id x_center y_center width height
+                annotations.push(`${classId} ${xCenter.toFixed(6)} ${yCenter.toFixed(6)} ${width.toFixed(6)} ${height.toFixed(6)}`);
+            });
+
+            return annotations.join('\n');
+        }
+
+        // 클래스 정보 파일 생성
+        function generateClassNames() {
+            const classNames = [];
+            fodImages.forEach(fodData => {
+                const classId = classIds[fodData.id];
+                classNames[classId] = fodData.name.replace('.jpg', '').replace('.png', '').replace('.jpeg', '');
+            });
+            return classNames.join('\n');
+        }
+
+        // 데이터셋 다운로드 (이미지 + annotation)
+        // 데이터셋 다운로드
+        function downloadDataset() {
+            if (!baseImage) {
+                alert('먼저 도로 이미지를 업로드하세요!');
+                return;
+            }
+
+            if (fods.length === 0) {
+                alert('배치된 FOD가 없습니다!');
+                return;
+            }
+
+            const timestamp = new Date().getTime();
+            const baseName = `fod_synthesis_${timestamp}`;
+
+            // 이미지 다운로드 (PNG로 변경)
+            const imgLink = document.createElement('a');
+            imgLink.download = `${baseName}.png`; // PNG 확장자로 변경
+            imgLink.href = canvas.toDataURL('image/png'); // PNG 형식으로 내보내기
+            imgLink.click();
+
+            // annotation 파일 다운로드
+            const annotation = generateYOLOAnnotation();
+            const annotationBlob = new Blob([annotation], { type: 'text/plain' });
+            const annotationLink = document.createElement('a');
+            annotationLink.download = `${baseName}.txt`;
+            annotationLink.href = URL.createObjectURL(annotationBlob);
+            annotationLink.click();
+
+            // 클래스 정보 파일 다운로드
+            const classNames = generateClassNames();
+            const classBlob = new Blob([classNames], { type: 'text/plain' });
+            const classLink = document.createElement('a');
+            classLink.download = `classes.txt`;
+            classLink.href = URL.createObjectURL(classBlob);
+            classLink.click();
+
+            alert('데이터셋이 다운로드되었습니다:\n- 합성 이미지 (PNG)\n- YOLO annotation 파일\n- 클래스 정보 파일');
+        }
+
+        // 이미지 다운로드
+        function downloadImage() {
+            if (!baseImage) {
+                alert('먼저 도로 이미지를 업로드하세요!');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = `fod_synthesis_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // 초기화
+        redrawCanvas();
+        updateClassMapping();
+    </script>
+</body>
+</html>
