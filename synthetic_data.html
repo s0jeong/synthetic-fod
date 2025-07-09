@@ -190,6 +190,17 @@
         .fod-item:hover .delete-btn {
             display: block;
         }
+        .quality-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .quality-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -236,6 +247,13 @@
             각 FOD 타입별로 클래스 ID가 자동 할당됩니다. 
             annotation 파일은 'class_id x_center y_center width height' 형식으로 생성됩니다. 
             모든 좌표는 이미지 크기에 대한 상대적 비율(0~1)로 정규화됩니다.
+            <br><br>
+            <strong>고화질 개선 사항:</strong>
+            • 원본 이미지 해상도 유지
+            • 고품질 이미지 렌더링 (imageSmoothingEnabled)
+            • PNG 무손실 포맷 지원
+            • 높은 품질 JPEG 압축률 (0.98)
+            • 캔버스 픽셀 비율 최적화
         </div>
 
         <div class="controls">
@@ -261,10 +279,27 @@
                 <input type="range" id="rotationSlider" min="0" max="360" value="0">
                 <span class="size-display" id="rotationDisplay">0°</span>
             </div>
+
+            <div class="control-group">
+                <label>출력 형식</label>
+                <select id="outputFormat">
+                    <option value="png">PNG (무손실)</option>
+                    <option value="jpeg">JPEG (고품질)</option>
+                </select>
+                <div class="quality-controls">
+                    <label>JPEG 품질:</label>
+                    <input type="range" id="jpegQuality" min="0.8" max="1.0" step="0.01" value="0.98">
+                    <span class="size-display" id="qualityDisplay">98%</span>
+                </div>
+                <div class="quality-info">PNG: 완전 무손실, 파일 크기 큼<br>JPEG: 고품질, 파일 크기 작음</div>
+            </div>
             
-            <button onclick="clearAllFODs()" class="clear-btn">모든 FOD 삭제</button>
-            <button onclick="downloadDataset()">데이터셋 다운로드</button>
-            <button onclick="downloadImage()">이미지만 다운로드</button>
+            <div class="control-group">
+                <label>작업</label>
+                <button onclick="clearAllFODs()" class="clear-btn">모든 FOD 삭제</button>
+                <button onclick="downloadDataset()">데이터셋 다운로드</button>
+                <button onclick="downloadImage()">이미지만 다운로드</button>
+            </div>
         </div>
 
         <div class="canvas-container">
@@ -295,14 +330,39 @@
         const rotationDisplay = document.getElementById('rotationDisplay');
         const fodStats = document.getElementById('fodStats');
         const classMapping = document.getElementById('classMapping');
+        const outputFormat = document.getElementById('outputFormat');
+        const jpegQuality = document.getElementById('jpegQuality');
+        const qualityDisplay = document.getElementById('qualityDisplay');
         
         let baseImage = null;
+        let originalImageData = null; // 원본 이미지 데이터 저장
         let fods = [];
         let fodImages = [];
         let selectedFodIndex = -1;
         let fodCounts = {};
         let classIds = {};
         let uniqueClasses = {}; // 고유 클래스 저장
+
+        // 고화질 렌더링을 위한 캔버스 설정
+        function setupHighQualityCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            
+            // 물리적 픽셀 크기 설정
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            // CSS 크기 설정
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            // 스케일 조정
+            ctx.scale(dpr, dpr);
+            
+            // 고품질 렌더링 설정
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+        }
 
         // 파일명에서 클래스명 추출 (숫자 제거)
         function extractClassName(filename) {
@@ -366,6 +426,20 @@
             rotationDisplay.textContent = this.value + '°';
         });
 
+        jpegQuality.addEventListener('input', function() {
+            qualityDisplay.textContent = Math.round(this.value * 100) + '%';
+        });
+
+        // 출력 형식 변경 이벤트
+        outputFormat.addEventListener('change', function() {
+            const qualityControls = document.querySelector('.quality-controls');
+            if (this.value === 'jpeg') {
+                qualityControls.style.display = 'flex';
+            } else {
+                qualityControls.style.display = 'none';
+            }
+        });
+
         // 도로 이미지 업로드 처리
         function handleImageUpload(e) {
             const file = e.target.files[0];
@@ -384,21 +458,46 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    const maxWidth = 1000;
-                    const maxHeight = 700;
+                    // 원본 이미지 해상도 유지
+                    const originalWidth = img.width;
+                    const originalHeight = img.height;
                     
-                    let { width, height } = img;
+                    // 화면 표시를 위한 최대 크기 제한
+                    const maxDisplayWidth = 1000;
+                    const maxDisplayHeight = 700;
                     
-                    if (width > maxWidth || height > maxHeight) {
-                        const ratio = Math.min(maxWidth / width, maxHeight / height);
-                        width = width * ratio;
-                        height = height * ratio;
+                    let displayWidth = originalWidth;
+                    let displayHeight = originalHeight;
+                    
+                    // 화면 표시용 크기 계산 (비율 유지)
+                    if (displayWidth > maxDisplayWidth || displayHeight > maxDisplayHeight) {
+                        const ratio = Math.min(maxDisplayWidth / displayWidth, maxDisplayHeight / displayHeight);
+                        displayWidth = Math.round(displayWidth * ratio);
+                        displayHeight = Math.round(displayHeight * ratio);
                     }
                     
-                    canvas.width = width;
-                    canvas.height = height;
+                    // 캔버스 크기를 원본 해상도로 설정
+                    canvas.width = originalWidth;
+                    canvas.height = originalHeight;
+                    
+                    // CSS 크기를 표시용 크기로 설정
+                    canvas.style.width = displayWidth + 'px';
+                    canvas.style.height = displayHeight + 'px';
+                    
+                    // 고품질 렌더링 설정
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
                     
                     baseImage = img;
+                    originalImageData = {
+                        width: originalWidth,
+                        height: originalHeight,
+                        displayWidth: displayWidth,
+                        displayHeight: displayHeight,
+                        scaleX: originalWidth / displayWidth,
+                        scaleY: originalHeight / displayHeight
+                    };
+                    
                     clearAllFODs();
                     redrawCanvas();
                 };
@@ -537,7 +636,11 @@
         function redrawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 배경 이미지 그리기
+            // 고품질 렌더링 설정
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // 배경 이미지 그리기 (원본 해상도로)
             if (baseImage) {
                 ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
             } else {
@@ -558,29 +661,34 @@
             updateStats();
         }
 
-        // FOD 이미지 그리기
+        // FOD 이미지 그리기 (고품질)
         function drawFodImage(fod) {
             const fodData = fodImages.find(f => f.id === fod.fodId);
             if (!fodData) return;
             
             ctx.save();
             ctx.globalAlpha = fod.opacity;
+            
+            // 고품질 렌더링 설정
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
             ctx.translate(fod.x, fod.y);
             ctx.rotate(fod.rotation * Math.PI / 180);
             
-            // 그림자 효과
+            // 부드러운 그림자 효과
             ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
             ctx.shadowBlur = fod.size * 0.1;
             ctx.shadowOffsetX = fod.size * 0.05;
             ctx.shadowOffsetY = fod.size * 0.05;
             
-            // 이미지 그리기 (정사각형으로 크기 조정)
+            // 이미지 그리기 (고품질 크기 조정)
             ctx.drawImage(fodData.image, -fod.size/2, -fod.size/2, fod.size, fod.size);
             
             ctx.restore();
         }
 
-        // 마우스 클릭 이벤트
+        // 마우스 클릭 이벤트 (좌표 변환 개선)
         canvas.addEventListener('click', function(e) {
             if (!baseImage) {
                 alert('먼저 도로 이미지를 업로드하세요!');
@@ -593,10 +701,11 @@
             }
             
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            // 실제 캔버스 좌표로 변환 (원본 해상도 기준)
+            const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+            const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
             
-            const size = parseInt(sizeSlider.value);
+            const size = parseInt(sizeSlider.value) * (originalImageData ? originalImageData.scaleX : 1);
             const opacity = parseFloat(opacitySlider.value);
             const rotation = parseInt(rotationSlider.value);
             const fodId = fodImages[selectedFodIndex].id;
@@ -624,6 +733,15 @@
                 redrawCanvas();
             }
         });
+
+        // 모든 FOD 삭제
+        function clearAllFODs() {
+            fods = [];
+            Object.keys(fodCounts).forEach(key => {
+                fodCounts[key] = 0;
+            });
+            redrawCanvas();
+        }
 
         // 모든 FOD 삭제
         function clearAllFODs() {
@@ -715,6 +833,7 @@
         }
 
         // 데이터셋 다운로드 (이미지 + annotation)
+        // 데이터셋 다운로드
         function downloadDataset() {
             if (!baseImage) {
                 alert('먼저 도로 이미지를 업로드하세요!');
@@ -729,10 +848,10 @@
             const timestamp = new Date().getTime();
             const baseName = `fod_synthesis_${timestamp}`;
 
-            // 이미지 다운로드
+            // 이미지 다운로드 (PNG로 변경)
             const imgLink = document.createElement('a');
-            imgLink.download = `${baseName}.jpg`;
-            imgLink.href = canvas.toDataURL('image/jpeg', 0.9);
+            imgLink.download = `${baseName}.png`; // PNG 확장자로 변경
+            imgLink.href = canvas.toDataURL('image/png'); // PNG 형식으로 내보내기
             imgLink.click();
 
             // annotation 파일 다운로드
@@ -751,7 +870,7 @@
             classLink.href = URL.createObjectURL(classBlob);
             classLink.click();
 
-            alert('데이터셋이 다운로드되었습니다:\n- 합성 이미지\n- YOLO annotation 파일\n- 클래스 정보 파일');
+            alert('데이터셋이 다운로드되었습니다:\n- 합성 이미지 (PNG)\n- YOLO annotation 파일\n- 클래스 정보 파일');
         }
 
         // 이미지 다운로드
