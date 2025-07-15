@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOD 합성 데이터 생성 도구</title>
+    <title>고급 FOD 합성 데이터 생성 도구</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,7 +12,7 @@
             background-color: #f0f0f0;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
@@ -25,25 +25,55 @@
             padding: 20px;
             text-align: center;
         }
-        .controls {
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
             padding: 20px;
-            border-bottom: 1px solid #eee;
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 300px;
+        }
+        .right-panel {
+            flex: 2;
+            min-width: 600px;
+        }
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .panel h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .controls {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
             align-items: center;
+            margin-bottom: 20px;
         }
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
         .control-group label {
             font-weight: bold;
             font-size: 12px;
             color: #666;
         }
-        select, button, input[type="range"], input[type="file"] {
+        select, button, input[type="range"], input[type="file"], input[type="number"] {
             padding: 8px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -71,11 +101,24 @@
         .upload-btn:hover {
             background: #219a52;
         }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            margin-bottom: 20px;
+        }
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
         .canvas-container {
             position: relative;
             text-align: center;
-            padding: 20px;
             background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
         }
         canvas {
             max-width: 100%;
@@ -83,67 +126,11 @@
             border-radius: 8px;
             cursor: crosshair;
         }
-        .stats {
-            padding: 20px;
-            background: #f8f9fa;
-            border-top: 1px solid #eee;
-        }
-        .fod-count {
-            display: inline-block;
-            margin-right: 20px;
-            padding: 5px 10px;
-            background: #e9ecef;
-            border-radius: 20px;
-            font-size: 12px;
-        }
-        .instructions {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 20px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .size-display {
-            font-size: 12px;
-            color: #666;
-        }
-        .upload-area {
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            background: #f8f9fa;
-            margin: 20px;
-        }
-        .upload-area.dragover {
-            border-color: #667eea;
-            background: #e3f2fd;
-        }
-        .fod-upload-area {
-            border: 2px dashed #27ae60;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            background: #f0fff4;
-            margin: 20px;
-        }
-        .fod-upload-area.dragover {
-            border-color: #219a52;
-            background: #e8f5e8;
-        }
-        #imageInput, #fodImageInput {
-            display: none;
-        }
         .fod-gallery {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            margin-bottom: 20px;
         }
         .fod-item {
             position: relative;
@@ -190,334 +177,571 @@
         .fod-item:hover .delete-btn {
             display: block;
         }
-        .quality-controls {
+        .blending-controls {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .augmentation-controls {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .advanced-section {
+            background: #e2e3f0;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .realism-section {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .checkbox-group {
             display: flex;
-            gap: 10px;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
             margin-top: 10px;
         }
-        .quality-info {
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stats {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+        .fod-count {
+            display: inline-block;
+            margin-right: 20px;
+            padding: 5px 10px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .size-display {
             font-size: 12px;
             color: #666;
+        }
+        .preview-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .preview-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        .preview-item canvas {
+            max-width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .preview-item h4 {
+            margin: 10px 0 5px 0;
+            font-size: 14px;
+        }
+        .batch-controls {
+            background: #f0f9ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .progress-container {
+            margin-top: 10px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            text-align: center;
             margin-top: 5px;
+            font-size: 12px;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>FOD 합성 데이터 생성 도구</h1>
-            <p>실제 도로 이미지 위에 실제 FOD 이미지를 배치하여 학습 데이터를 생성하세요</p>
+            <h1>고급 FOD 합성 데이터 생성 도구</h1>
+            <p>그림자, 원근감, 조명 일치를 통한 실제같은 FOD 객체 합성</p>
         </div>
         
-        <div class="upload-area" id="uploadArea">
-            <h3>도로 이미지 업로드</h3>
-            <p>배경으로 사용할 도로 이미지를 드래그 앤 드롭하거나 클릭하여 업로드하세요</p>
-            <input type="file" id="imageInput" accept="image/*">
-            <button onclick="document.getElementById('imageInput').click()" class="upload-btn">도로 이미지 선택</button>
-        </div>
-        
-        <div class="fod-upload-area" id="fodUploadArea">
-            <h3>FOD 이미지 업로드</h3>
-            <p>실제 촬영한 FOD 이미지들을 업로드하세요 (여러 개 선택 가능)</p>
-            <input type="file" id="fodImageInput" accept="image/*" multiple>
-            <button onclick="document.getElementById('fodImageInput').click()" class="upload-btn">FOD 이미지 선택</button>
-        </div>
-        
-        <div class="fod-gallery" id="fodGallery">
-            <div style="width: 100%; text-align: center; color: #666; font-style: italic;">
-                업로드된 FOD 이미지가 여기에 표시됩니다
-            </div>
-        </div>
-        
-        <div class="instructions">
-            <strong>사용법:</strong>
-            1. 도로 이미지를 업로드하세요.(배경용)
-            2. 실제 촬영한 FOD 이미지들을 업로드하세요.(box.jpg, box2.jpg → 같은 "box" 클래스로 분류)
-            3. 갤러리에서 배치할 FOD를 선택하세요.
-            4. 크기와 투명도를 조절하세요.
-            5. 도로 이미지 위를 클릭하여 FOD를 배치하세요.
-            6. 우클릭으로 가장 최근에 배치된 객체를 삭제할 수 있습니다.
-            7. <strong>'데이터셋 다운로드'</strong>를 누르면 합성 이미지, YOLO annotation, 클래스 정보가 ZIP 파일로 다운로드됩니다.
-            <br><br>
-            <strong>클래스 자동 분류:</strong>
-            파일명에서 숫자를 제거하여 클래스명을 생성합니다.(box.jpg, box2.jpg, box3.jpg → "box" 클래스)
-            <br><br>
-            <strong>YOLO Annotation:</strong>
-            각 FOD 타입별로 클래스 ID가 자동 할당됩니다. 
-            annotation 파일은 'class_id x_center y_center width height' 형식으로 생성됩니다. 
-            모든 좌표는 이미지 크기에 대한 상대적 비율(0~1)로 정규화됩니다.
-            <br><br>
-            <strong>고화질 개선 사항:</strong>
-            • 원본 이미지 해상도 유지
-            • 고품질 이미지 렌더링 (imageSmoothingEnabled)
-            • PNG 무손실 포맷 지원
-            • 높은 품질 JPEG 압축률 (0.98)
-            • 캔버스 픽셀 비율 최적화
-        </div>
-
-        <div class="controls">
-            <div class="control-group">
-                <label>선택된 FOD</label>
-                <span id="selectedFodName" style="font-size: 12px; color: #666;">FOD를 선택하세요</span>
-            </div>
-            
-            <div class="control-group">
-                <label>크기 (픽셀)</label>
-                <input type="range" id="sizeSlider" min="10" max="150" value="60">
-                <span class="size-display" id="sizeDisplay">60px</span>
-            </div>
-            
-            <div class="control-group">
-                <label>투명도</label>
-                <input type="range" id="opacitySlider" min="0.7" max="1" step="0.1" value="0.9">
-                <span class="size-display" id="opacityDisplay">90%</span>
-            </div>
-            
-            <div class="control-group">
-                <label>회전</label>
-                <input type="range" id="rotationSlider" min="0" max="360" value="0">
-                <span class="size-display" id="rotationDisplay">0°</span>
-            </div>
-
-            <div class="control-group">
-                <label>출력 형식</label>
-                <select id="outputFormat">
-                    <option value="png">PNG (무손실)</option>
-                    <option value="jpeg">JPEG (고품질)</option>
-                </select>
-                <div class="quality-controls">
-                    <label>JPEG 품질:</label>
-                    <input type="range" id="jpegQuality" min="0.8" max="1.0" step="0.01" value="0.98">
-                    <span class="size-display" id="qualityDisplay">98%</span>
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="panel">
+                    <h3>1. 이미지 업로드</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <h4>배경 이미지 업로드</h4>
+                        <p>다양한 도로/배경 이미지를 업로드하세요</p>
+                        <input type="file" id="imageInput" accept="image/*" multiple>
+                        <button onclick="document.getElementById('imageInput').click()" class="upload-btn">배경 이미지 선택</button>
+                    </div>
+                    
+                    <div class="upload-area" id="fodUploadArea">
+                        <h4>FOD 이미지 업로드</h4>
+                        <p>다양한 시점의 FOD 이미지들을 업로드하세요</p>
+                        <input type="file" id="fodImageInput" accept="image/*" multiple>
+                        <button onclick="document.getElementById('fodImageInput').click()" class="upload-btn">FOD 이미지 선택</button>
+                    </div>
+                    
+                    <div class="fod-gallery" id="fodGallery">
+                        <div style="width: 100%; text-align: center; color: #666; font-style: italic;">
+                            업로드된 FOD 이미지가 여기에 표시됩니다
+                        </div>
+                    </div>
                 </div>
-                <div class="quality-info">PNG: 완전 무손실, 파일 크기 큼<br>JPEG: 고품질, 파일 크기 작음</div>
-            </div>
-            
-            <div class="control-group">
-                <label>작업</label>
-                <button onclick="clearAllFODs()" class="clear-btn">모든 FOD 삭제</button>
-                <button onclick="downloadDataset()">데이터셋 다운로드</button>
-                <button onclick="downloadImage()">이미지만 다운로드</button>
-            </div>
-        </div>
 
-        <div class="canvas-container">
-            <canvas id="canvas" width="1000" height="700"></canvas>
+                <div class="panel">
+                    <h3>2. 기본 컨트롤</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>선택된 FOD</label>
+                            <span id="selectedFodName" style="font-size: 12px; color: #666;">FOD를 선택하세요</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>크기 (픽셀)</label>
+                            <input type="range" id="sizeSlider" min="10" max="200" value="60">
+                            <span class="size-display" id="sizeDisplay">60px</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>투명도</label>
+                            <input type="range" id="opacitySlider" min="0.5" max="1" step="0.1" value="0.9">
+                            <span class="size-display" id="opacityDisplay">90%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>회전</label>
+                            <input type="range" id="rotationSlider" min="0" max="360" value="0">
+                            <span class="size-display" id="rotationDisplay">0°</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel realism-section">
+                    <h3>3. 실사 효과 (NEW)</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>그림자 강도</label>
+                            <input type="range" id="shadowIntensity" min="0" max="100" value="40">
+                            <span class="size-display" id="shadowDisplay">40%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>그림자 거리</label>
+                            <input type="range" id="shadowDistance" min="0" max="20" value="5">
+                            <span class="size-display" id="shadowDistanceDisplay">5px</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>원근감 (Y축)</label>
+                            <input type="range" id="perspectiveY" min="0" max="50" value="0">
+                            <span class="size-display" id="perspectiveDisplay">0%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>조명 일치 강도</label>
+                            <input type="range" id="lightingMatch" min="0" max="100" value="30">
+                            <span class="size-display" id="lightingMatchDisplay">30%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableShadow" checked>
+                            <label for="enableShadow">그림자 활성화</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enablePerspective">
+                            <label for="enablePerspective">원근감 활성화</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableLightingMatch">
+                            <label for="enableLightingMatch">조명 일치 활성화</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableGroundContact" checked>
+                            <label for="enableGroundContact">지면 접촉 효과</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel blending-controls">
+                    <h3>4. 블렌딩 기법</h3>
+                    <div class="control-group">
+                        <label>블렌딩 방법</label>
+                        <select id="blendingMethod">
+                            <option value="none">블렌딩 없음</option>
+                            <option value="gaussian" selected>가우시안 블러</option>
+                            <option value="poisson">포아송 블렌딩</option>
+                            <option value="alpha">알파 블렌딩</option>
+                            <option value="feather">페더링</option>
+                            <option value="random">랜덤 블렌딩</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>블렌딩 강도</label>
+                        <input type="range" id="blendingStrength" min="1" max="20" value="5">
+                        <span class="size-display" id="blendingDisplay">5</span>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="multipleBlending" checked>
+                            <label for="multipleBlending">다중 블렌딩 적용</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="adaptiveBlending">
+                            <label for="adaptiveBlending">적응형 블렌딩</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel augmentation-controls">
+                    <h3>5. 데이터 증강</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enable2DRotation" checked>
+                            <label for="enable2DRotation">2D 회전</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enable3DRotation">
+                            <label for="enable3DRotation">3D 회전 (원근)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableTruncation" checked>
+                            <label for="enableTruncation">절단 (25% 이상 노출)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableOcclusion">
+                            <label for="enableOcclusion">가림 (최대 IOU 0.75)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableDistractor">
+                            <label for="enableDistractor">방해 객체 추가</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enableScaleVariation" checked>
+                            <label for="enableScaleVariation">스케일 변화</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel advanced-section">
+                    <h3>6. 고급 설정</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>viewpoint 다양성</label>
+                            <input type="range" id="viewpointVariation" min="0" max="100" value="50">
+                            <span class="size-display" id="viewpointDisplay">50%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>조명 변화</label>
+                            <input type="range" id="lightingVariation" min="0" max="100" value="30">
+                            <span class="size-display" id="lightingDisplay">30%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>색상 변화</label>
+                            <input type="range" id="colorVariation" min="0" max="100" value="20">
+                            <span class="size-display" id="colorDisplay">20%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel batch-controls">
+                    <h3>7. 배치 생성</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>배치 크기</label>
+                            <input type="number" id="batchSize" min="1" max="100" value="10">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>객체 수 (이미지당)</label>
+                            <div class="control-row">
+                                <input type="number" id="minObjects" min="1" max="20" value="1" placeholder="최소">
+                                <input type="number" id="maxObjects" min="1" max="20" value="5" placeholder="최대">
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <button onclick="generateBatch()" class="upload-btn">배치 생성</button>
+                            <button onclick="clearAllFODs()" class="clear-btn">모든 FOD 삭제</button>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="panel">
+                    <h3>미리보기</h3>
+                    <div class="preview-container" id="previewContainer">
+                        <div class="preview-item">
+                            <h4>원본</h4>
+                            <canvas id="previewOriginal" width="200" height="150"></canvas>
+                        </div>
+                        <div class="preview-item">
+                            <h4>그림자 추가</h4>
+                            <canvas id="previewShadow" width="200" height="150"></canvas>
+                        </div>
+                        <div class="preview-item">
+                            <h4>실사 효과</h4>
+                            <canvas id="previewRealistic" width="200" height="150"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="canvas" width="1000" height="700"></canvas>
+                </div>
+
+                <div class="panel">
+                    <h3>액션</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>배경 이미지 선택</label>
+                            <select id="backgroundSelector">
+                                <option value="0">배경 이미지를 업로드하세요</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>다운로드</label>
+                            <div class="control-row">
+                                <button onclick="downloadDataset()">데이터셋 다운로드</button>
+                                <button onclick="downloadImage()">이미지만 다운로드</button>
+                                <button onclick="downloadBatch()">배치 다운로드</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="stats">
             <div id="fodStats"></div>
             <div id="classMapping" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
         </div>
+
+        <div class="instructions">
+            <strong>실사 효과 개선사항:</strong><br>
+            • <strong>그림자 효과:</strong> 지면에 자연스러운 그림자 투사<br>
+            • <strong>원근감:</strong> 거리에 따른 크기 조정 및 원근 변형<br>
+            • <strong>조명 일치:</strong> 배경 조명에 맞춰 FOD 밝기 조정<br>
+            • <strong>지면 접촉:</strong> 객체가 지면에 자연스럽게 접촉<br>
+            • <strong>색상 보정:</strong> 배경 색조에 맞춰 FOD 색상 조정<br>
+            • <strong>깊이 블러:</strong> 거리에 따른 초점 블러 효과
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
+        // 전역 변수
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const imageInput = document.getElementById('imageInput');
         const fodImageInput = document.getElementById('fodImageInput');
-        const uploadArea = document.getElementById('uploadArea');
-        const fodUploadArea = document.getElementById('fodUploadArea');
-        const fodGallery = document.getElementById('fodGallery');
-        const selectedFodName = document.getElementById('selectedFodName');
-        const sizeSlider = document.getElementById('sizeSlider');
-        const opacitySlider = document.getElementById('opacitySlider');
-        const rotationSlider = document.getElementById('rotationSlider');
-        const sizeDisplay = document.getElementById('sizeDisplay');
-        const opacityDisplay = document.getElementById('opacityDisplay');
-        const rotationDisplay = document.getElementById('rotationDisplay');
-        const fodStats = document.getElementById('fodStats');
-        const classMapping = document.getElementById('classMapping');
-        const outputFormat = document.getElementById('outputFormat');
-        const jpegQuality = document.getElementById('jpegQuality');
-        const qualityDisplay = document.getElementById('qualityDisplay');
+        const backgroundSelector = document.getElementById('backgroundSelector');
         
+        let backgroundImages = [];
+        let currentBackgroundIndex = 0;
         let baseImage = null;
-        let originalImageData = null; // 원본 이미지 데이터 저장
+        let originalImageData = null;
         let fods = [];
         let fodImages = [];
         let selectedFodIndex = -1;
         let fodCounts = {};
         let classIds = {};
-        let uniqueClasses = {}; // 고유 클래스 저장
+        let uniqueClasses = {};
+        let batchResults = [];
 
-        // 고화질 렌더링을 위한 캔버스 설정
-        function setupHighQualityCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
+        // 슬라이더 업데이트 함수들
+        function updateSliderDisplays() {
+            document.getElementById('sizeDisplay').textContent = document.getElementById('sizeSlider').value + 'px';
+            document.getElementById('opacityDisplay').textContent = Math.round(document.getElementById('opacitySlider').value * 100) + '%';
+            document.getElementById('rotationDisplay').textContent = document.getElementById('rotationSlider').value + '°';
+            document.getElementById('blendingDisplay').textContent = document.getElementById('blendingStrength').value;
+            document.getElementById('viewpointDisplay').textContent = document.getElementById('viewpointVariation').value + '%';
+            document.getElementById('lightingDisplay').textContent = document.getElementById('lightingVariation').value + '%';
+            document.getElementById('colorDisplay').textContent = document.getElementById('colorVariation').value + '%';
             
-            // 물리적 픽셀 크기 설정
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            
-            // CSS 크기 설정
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
-            
-            // 스케일 조정
-            ctx.scale(dpr, dpr);
-            
-            // 고품질 렌더링 설정
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
+            // 새로운 실사 효과 슬라이더들
+            document.getElementById('shadowDisplay').textContent = document.getElementById('shadowIntensity').value + '%';
+            document.getElementById('shadowDistanceDisplay').textContent = document.getElementById('shadowDistance').value + 'px';
+            document.getElementById('perspectiveDisplay').textContent = document.getElementById('perspectiveY').value + '%';
+            document.getElementById('lightingMatchDisplay').textContent = document.getElementById('lightingMatch').value + '%';
         }
 
-        // 파일명에서 클래스명 추출 (숫자 제거)
-        function extractClassName(filename) {
-            // 확장자 제거
-            const nameWithoutExt = filename.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, '');
-            // 숫자 제거 (끝에 있는 숫자들)
-            const className = nameWithoutExt.replace(/\d+$/, '');
-            return className;
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 기존 슬라이더 이벤트
+            document.getElementById('sizeSlider').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('opacitySlider').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('rotationSlider').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('blendingStrength').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('viewpointVariation').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('lightingVariation').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('colorVariation').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            
+            // 새로운 실사 효과 슬라이더 이벤트
+            document.getElementById('shadowIntensity').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('shadowDistance').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('perspectiveY').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+            document.getElementById('lightingMatch').addEventListener('input', () => { updateSliderDisplays(); redrawCanvas(); });
+
+            // 실사 효과 체크박스 이벤트
+            document.getElementById('enableShadow').addEventListener('change', redrawCanvas);
+            document.getElementById('enablePerspective').addEventListener('change', redrawCanvas);
+            document.getElementById('enableLightingMatch').addEventListener('change', redrawCanvas);
+            document.getElementById('enableGroundContact').addEventListener('change', redrawCanvas);
+
+            // 파일 업로드 이벤트
+            imageInput.addEventListener('change', handleBackgroundUpload);
+            fodImageInput.addEventListener('change', handleFodImageUpload);
+            backgroundSelector.addEventListener('change', handleBackgroundChange);
+
+            // 캔버스 이벤트
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('contextmenu', handleCanvasRightClick);
+
+            // 블렌딩 방법 변경 이벤트
+            document.getElementById('blendingMethod').addEventListener('change', () => { updatePreviews(); redrawCanvas(); });
         }
 
-        // 이미지 업로드 이벤트
-        imageInput.addEventListener('change', handleImageUpload);
-        fodImageInput.addEventListener('change', handleFodImageUpload);
-        
-        // 도로 이미지 드래그 앤 드롭
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleImageFile(files[0]);
-            }
-        });
-
-        // FOD 이미지 드래그 앤 드롭
-        fodUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fodUploadArea.classList.add('dragover');
-        });
-        
-        fodUploadArea.addEventListener('dragleave', () => {
-            fodUploadArea.classList.remove('dragover');
-        });
-        
-        fodUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fodUploadArea.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files);
-            handleFodImageFiles(files);
-        });
-
-        // 슬라이더 이벤트
-        sizeSlider.addEventListener('input', function() {
-            sizeDisplay.textContent = this.value + 'px';
-        });
-
-        opacitySlider.addEventListener('input', function() {
-            opacityDisplay.textContent = Math.round(this.value * 100) + '%';
-        });
-
-        rotationSlider.addEventListener('input', function() {
-            rotationDisplay.textContent = this.value + '°';
-        });
-
-        jpegQuality.addEventListener('input', function() {
-            qualityDisplay.textContent = Math.round(this.value * 100) + '%';
-        });
-
-        // 출력 형식 변경 이벤트
-        outputFormat.addEventListener('change', function() {
-            const qualityControls = document.querySelector('.quality-controls');
-            if (this.value === 'jpeg') {
-                qualityControls.style.display = 'flex';
-            } else {
-                qualityControls.style.display = 'none';
-            }
-        });
-
-        // 도로 이미지 업로드 처리
-        function handleImageUpload(e) {
-            const file = e.target.files[0];
-            if (file) {
-                handleImageFile(file);
-            }
-        }
-
-        function handleImageFile(file) {
-            if (!file.type.startsWith('image/')) {
-                alert('이미지 파일만 업로드 가능합니다.');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    // 원본 이미지 해상도 유지
-                    const originalWidth = img.width;
-                    const originalHeight = img.height;
-                    
-                    // 화면 표시를 위한 최대 크기 제한
-                    const maxDisplayWidth = 1000;
-                    const maxDisplayHeight = 700;
-                    
-                    let displayWidth = originalWidth;
-                    let displayHeight = originalHeight;
-                    
-                    // 화면 표시용 크기 계산 (비율 유지)
-                    if (displayWidth > maxDisplayWidth || displayHeight > maxDisplayHeight) {
-                        const ratio = Math.min(maxDisplayWidth / displayWidth, maxDisplayHeight / displayHeight);
-                        displayWidth = Math.round(displayWidth * ratio);
-                        displayHeight = Math.round(displayHeight * ratio);
-                    }
-                    
-                    // 캔버스 크기를 원본 해상도로 설정
-                    canvas.width = originalWidth;
-                    canvas.height = originalHeight;
-                    
-                    // CSS 크기를 표시용 크기로 설정
-                    canvas.style.width = displayWidth + 'px';
-                    canvas.style.height = displayHeight + 'px';
-                    
-                    // 고품질 렌더링 설정
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    
-                    baseImage = img;
-                    originalImageData = {
-                        width: originalWidth,
-                        height: originalHeight,
-                        displayWidth: displayWidth,
-                        displayHeight: displayHeight,
-                        scaleX: originalWidth / displayWidth,
-                        scaleY: originalHeight / displayHeight
+        // 배경 이미지 업로드 처리
+        function handleBackgroundUpload(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        backgroundImages.push({
+                            image: img,
+                            name: file.name,
+                            src: e.target.result
+                        });
+                        updateBackgroundSelector();
+                        
+                        // 첫 번째 이미지를 자동 선택
+                        if (backgroundImages.length === 1) {
+                            selectBackground(0);
+                        }
                     };
-                    
-                    clearAllFODs();
-                    redrawCanvas();
+                    img.src = e.target.result;
                 };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 배경 선택기 업데이트
+        function updateBackgroundSelector() {
+            const selector = document.getElementById('backgroundSelector');
+            selector.innerHTML = '';
+            
+            backgroundImages.forEach((bg, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = bg.name;
+                selector.appendChild(option);
+            });
+        }
+
+        // 배경 변경 처리
+        function handleBackgroundChange(e) {
+            const index = parseInt(e.target.value);
+            selectBackground(index);
+        }
+
+        // 배경 선택
+        function selectBackground(index) {
+            if (index >= 0 && index < backgroundImages.length) {
+                currentBackgroundIndex = index;
+                const bgData = backgroundImages[index];
+                
+                // 캔버스 크기 설정
+                const maxWidth = 1000;
+                const maxHeight = 700;
+                
+                let width = bgData.image.width;
+                let height = bgData.image.height;
+                
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                baseImage = bgData.image;
+                originalImageData = {
+                    width: width,
+                    height: height,
+                    displayWidth: width,
+                    displayHeight: height,
+                    scaleX: width / bgData.image.width,
+                    scaleY: height / bgData.image.height
+                };
+                
+                redrawCanvas();
+            }
         }
 
         // FOD 이미지 업로드 처리
         function handleFodImageUpload(e) {
             const files = Array.from(e.target.files);
-            handleFodImageFiles(files);
-        }
-
-        function handleFodImageFiles(files) {
             files.forEach(file => {
-                if (!file.type.startsWith('image/')) {
-                    alert(`${file.name}은 이미지 파일이 아닙니다.`);
-                    return;
-                }
+                if (!file.type.startsWith('image/')) return;
 
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -542,7 +766,6 @@
                             uniqueClasses[className] = Object.keys(uniqueClasses).length;
                         }
                         
-                        // 클래스 ID 할당
                         classIds[fodId] = uniqueClasses[className];
                         
                         updateFodGallery();
@@ -559,14 +782,23 @@
             });
         }
 
+        // 파일명에서 클래스명 추출
+        function extractClassName(filename) {
+            const nameWithoutExt = filename.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, '');
+            const className = nameWithoutExt.replace(/\d+$/, '');
+            return className || 'unknown';
+        }
+
         // FOD 갤러리 업데이트
         function updateFodGallery() {
+            const gallery = document.getElementById('fodGallery');
+            
             if (fodImages.length === 0) {
-                fodGallery.innerHTML = '<div style="width: 100%; text-align: center; color: #666; font-style: italic;">업로드된 FOD 이미지가 여기에 표시됩니다</div>';
+                gallery.innerHTML = '<div style="width: 100%; text-align: center; color: #666; font-style: italic;">업로드된 FOD 이미지가 여기에 표시됩니다</div>';
                 return;
             }
 
-            fodGallery.innerHTML = '';
+            gallery.innerHTML = '';
             fodImages.forEach((fodData, index) => {
                 const fodItem = document.createElement('div');
                 fodItem.className = 'fod-item';
@@ -577,318 +809,615 @@
                 fodItem.innerHTML = `
                     <img src="${fodData.src}" alt="${fodData.name}">
                     <div class="name">${fodData.name} (${fodData.className})</div>
-                    <button class="delete-btn" onclick="deleteFodImage(${index})">&times;</button>
+                    <button class="delete-btn" onclick="deleteFodImage(${index})">×</button>
                 `;
                 
                 fodItem.addEventListener('click', () => selectFod(index));
-                fodGallery.appendChild(fodItem);
+                gallery.appendChild(fodItem);
             });
         }
 
         // FOD 선택
         function selectFod(index) {
-            selectedFodIndex = index;
-            selectedFodName.textContent = `${fodImages[index].name} (${fodImages[index].className})`;
-            updateFodGallery();
+            if (index >= 0 && index < fodImages.length) {
+                selectedFodIndex = index;
+                updateFodGallery();
+                updateSelectedFodDisplay();
+                updatePreviews();
+            }
+        }
+
+        // 선택된 FOD 표시 업데이트
+        function updateSelectedFodDisplay() {
+            const selectedFodName = document.getElementById('selectedFodName');
+            if (selectedFodIndex >= 0 && selectedFodIndex < fodImages.length) {
+                selectedFodName.textContent = fodImages[selectedFodIndex].name;
+            } else {
+                selectedFodName.textContent = 'FOD를 선택하세요';
+            }
         }
 
         // FOD 이미지 삭제
         function deleteFodImage(index) {
-            const fodData = fodImages[index];
-            
-            // 해당 FOD로 배치된 객체들 제거
-            fods = fods.filter(fod => fod.fodId !== fodData.id);
-            
-            // FOD 이미지 목록에서 제거
-            fodImages.splice(index, 1);
-            delete fodCounts[fodData.id];
-            delete classIds[fodData.id];
-            
-            // 고유 클래스 재계산
-            uniqueClasses = {};
-            fodImages.forEach(fodData => {
-                if (!uniqueClasses[fodData.className]) {
-                    uniqueClasses[fodData.className] = Object.keys(uniqueClasses).length;
-                }
-            });
-            
-            // 클래스 ID 재할당
-            fodImages.forEach(fodData => {
-                classIds[fodData.id] = uniqueClasses[fodData.className];
-            });
-            
-            // 선택된 FOD 조정
-            if (selectedFodIndex === index) {
-                selectedFodIndex = fodImages.length > 0 ? 0 : -1;
-                selectedFodName.textContent = selectedFodIndex >= 0 ? 
-                    `${fodImages[selectedFodIndex].name} (${fodImages[selectedFodIndex].className})` : 
-                    'FOD를 선택하세요';
-            } else if (selectedFodIndex > index) {
-                selectedFodIndex--;
-            }
-            
-            updateFodGallery();
-            updateClassMapping();
-            redrawCanvas();
-        }
-
-        // 캔버스 다시 그리기
-        function redrawCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 고품질 렌더링 설정
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            
-            // 배경 이미지 그리기 (원본 해상도로)
-            if (baseImage) {
-                ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
-            } else {
-                ctx.fillStyle = '#f0f0f0';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (index >= 0 && index < fodImages.length) {
+                const fodData = fodImages[index];
                 
-                ctx.fillStyle = '#999';
-                ctx.font = '24px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('도로 이미지를 업로드하세요', canvas.width / 2, canvas.height / 2);
-            }
-            
-            // FOD 그리기
-            fods.forEach(fod => {
-                drawFodImage(fod);
-            });
-            
-            updateStats();
-        }
-
-        // FOD 이미지 그리기 (고품질)
-        function drawFodImage(fod) {
-            const fodData = fodImages.find(f => f.id === fod.fodId);
-            if (!fodData) return;
-            
-            ctx.save();
-            ctx.globalAlpha = fod.opacity;
-            
-            // 고품질 렌더링 설정
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            
-            ctx.translate(fod.x, fod.y);
-            ctx.rotate(fod.rotation * Math.PI / 180);
-            
-            // 부드러운 그림자 효과
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-            ctx.shadowBlur = fod.size * 0.1;
-            ctx.shadowOffsetX = fod.size * 0.05;
-            ctx.shadowOffsetY = fod.size * 0.05;
-            
-            // 이미지 그리기 (고품질 크기 조정)
-            ctx.drawImage(fodData.image, -fod.size/2, -fod.size/2, fod.size, fod.size);
-            
-            ctx.restore();
-        }
-
-        // 마우스 클릭 이벤트 (좌표 변환 개선)
-        canvas.addEventListener('click', function(e) {
-            if (!baseImage) {
-                alert('먼저 도로 이미지를 업로드하세요!');
-                return;
-            }
-            
-            if (selectedFodIndex === -1) {
-                alert('먼저 FOD를 선택하세요!');
-                return;
-            }
-            
-            const rect = canvas.getBoundingClientRect();
-            // 실제 캔버스 좌표로 변환 (원본 해상도 기준)
-            const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
-            const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
-            
-            const size = parseInt(sizeSlider.value) * (originalImageData ? originalImageData.scaleX : 1);
-            const opacity = parseFloat(opacitySlider.value);
-            const rotation = parseInt(rotationSlider.value);
-            const fodId = fodImages[selectedFodIndex].id;
-            
-            const fod = {
-                fodId: fodId,
-                x: x,
-                y: y,
-                size: size,
-                opacity: opacity,
-                rotation: rotation
-            };
-            
-            fods.push(fod);
-            fodCounts[fodId]++;
-            redrawCanvas();
-        });
-
-        // 우클릭으로 삭제
-        canvas.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            if (fods.length > 0) {
-                const removedFod = fods.pop();
-                fodCounts[removedFod.fodId]--;
+                // 해당 FOD의 모든 인스턴스 삭제
+                fods = fods.filter(fod => fod.fodId !== fodData.id);
+                
+                // 배열에서 제거
+                fodImages.splice(index, 1);
+                delete fodCounts[fodData.id];
+                delete classIds[fodData.id];
+                
+                // 선택된 인덱스 조정
+                if (selectedFodIndex === index) {
+                    selectedFodIndex = -1;
+                } else if (selectedFodIndex > index) {
+                    selectedFodIndex--;
+                }
+                
+                updateFodGallery();
+                updateSelectedFodDisplay();
+                updateFodStats();
                 redrawCanvas();
             }
-        });
-
-        // 모든 FOD 삭제
-        function clearAllFODs() {
-            fods = [];
-            Object.keys(fodCounts).forEach(key => {
-                fodCounts[key] = 0;
-            });
-            redrawCanvas();
-        }
-
-        // 모든 FOD 삭제
-        function clearAllFODs() {
-            fods = [];
-            Object.keys(fodCounts).forEach(key => {
-                fodCounts[key] = 0;
-            });
-            redrawCanvas();
-        }
-
-        // 통계 업데이트
-        function updateStats() {
-            const classCounts = {};
-            
-            // 클래스별 개수 계산
-            fodImages.forEach(fodData => {
-                const className = fodData.className;
-                if (!classCounts[className]) {
-                    classCounts[className] = 0;
-                }
-                classCounts[className] += (fodCounts[fodData.id] || 0);
-            });
-            
-            const total = Object.values(classCounts).reduce((sum, count) => sum + count, 0);
-            
-            let statsHtml = `<strong>배치된 FOD 현황 (총 ${total}개):</strong><br>`;
-            
-            Object.keys(classCounts).forEach(className => {
-                const count = classCounts[className];
-                const classId = uniqueClasses[className];
-                statsHtml += `<span class="fod-count">${className} (class ${classId}): ${count}개</span>`;
-            });
-            
-            fodStats.innerHTML = statsHtml;
         }
 
         // 클래스 매핑 업데이트
         function updateClassMapping() {
-            if (Object.keys(uniqueClasses).length === 0) {
-                classMapping.innerHTML = '';
-                return;
-            }
-
-            let mappingHtml = '<strong>YOLO 클래스 매핑:</strong><br>';
-            Object.keys(uniqueClasses).forEach(className => {
-                const classId = uniqueClasses[className];
-                mappingHtml += `클래스 ${classId}: ${className} `;
-            });
+            const classMapping = document.getElementById('classMapping');
+            const mappings = [];
             
-            classMapping.innerHTML = mappingHtml;
+            for (const [className, classId] of Object.entries(uniqueClasses)) {
+                mappings.push(`${className}: ${classId}`);
+            }
+            
+            classMapping.textContent = mappings.length > 0 ? `클래스 매핑: ${mappings.join(', ')}` : '';
         }
 
-        // YOLO format annotation 생성
-        function generateYOLOAnnotation() {
-            if (!baseImage || fods.length === 0) {
-                return '';
+        // FOD 통계 업데이트
+        function updateFodStats() {
+            const statsDiv = document.getElementById('fodStats');
+            const total = Object.values(fodCounts).reduce((sum, count) => sum + count, 0);
+            
+            const statElements = [];
+            for (const [fodId, count] of Object.entries(fodCounts)) {
+                const fodData = fodImages.find(f => f.id == fodId);
+                if (fodData && count > 0) {
+                    statElements.push(`<span class="fod-count">${fodData.className}: ${count}</span>`);
+                }
             }
+            
+            statsDiv.innerHTML = `<strong>총 FOD 수: ${total}</strong><br>${statElements.join('')}`;
+        }
 
-            const annotations = [];
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
+        // 캔버스 클릭 처리
+        function handleCanvasClick(e) {
+            if (selectedFodIndex < 0 || !baseImage) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            addFodToCanvas(x, y);
+        }
 
-            fods.forEach(fod => {
-                const classId = classIds[fod.fodId];
+        // 캔버스 우클릭 처리 (FOD 삭제)
+        function handleCanvasRightClick(e) {
+            e.preventDefault();
+    
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            // 클릭 지점의 FOD 찾기
+            for (let i = fods.length - 1; i >= 0; i--) {
+                const fod = fods[i];
+                const distance = Math.sqrt(Math.pow(x - fod.x, 2) + Math.pow(y - fod.y, 2));
                 
-                // 중심점 좌표 정규화 (0~1)
-                const xCenter = fod.x / imgWidth;
-                const yCenter = fod.y / imgHeight;
-                
-                // 박스 크기 정규화 (0~1)
-                const width = fod.size / imgWidth;
-                const height = fod.size / imgHeight;
-                
-                // YOLO format: class_id x_center y_center width height
-                annotations.push(`${classId} ${xCenter.toFixed(6)} ${yCenter.toFixed(6)} ${width.toFixed(6)} ${height.toFixed(6)}`);
+                if (distance <= fod.size / 2) {
+                    fodCounts[fod.fodId]--;
+                    fods.splice(i, 1);
+                    updateFodStats();
+                    redrawCanvas();
+                    break;
+                }
+            }
+        }
+
+        // FOD를 캔버스에 추가
+        function addFodToCanvas(x, y) {
+            const fodData = fodImages[selectedFodIndex];
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const opacity = parseFloat(document.getElementById('opacitySlider').value);
+            const rotation = parseInt(document.getElementById('rotationSlider').value);
+            
+            // 데이터 증강 적용
+            const augmentedProperties = applyDataAugmentation({
+                size: size,
+                opacity: opacity,
+                rotation: rotation,
+                x: x,
+                y: y
             });
+            
+            const fod = {
+                id: Date.now() + Math.random(),
+                fodId: fodData.id,
+                className: fodData.className,
+                classId: classIds[fodData.id],
+                image: fodData.image,
+                x: augmentedProperties.x,
+                y: augmentedProperties.y,
+                size: augmentedProperties.size,
+                opacity: augmentedProperties.opacity,
+                rotation: augmentedProperties.rotation,
+                blendingMethod: document.getElementById('blendingMethod').value,
+                blendingStrength: parseInt(document.getElementById('blendingStrength').value)
+            };
+            
+            fods.push(fod);
+            fodCounts[fodData.id]++;
+            
+            updateFodStats();
+            redrawCanvas();
+        }
 
+        // 데이터 증강 적용
+        function applyDataAugmentation(props) {
+            const augmented = { ...props };
+            
+            // 2D 회전
+            if (document.getElementById('enable2DRotation').checked) {
+                augmented.rotation = Math.random() * 360;
+            }
+            
+            // 스케일 변화
+            if (document.getElementById('enableScaleVariation').checked) {
+                const scaleVariation = 0.3; // ±30%
+                const scaleFactor = 1 + (Math.random() - 0.5) * scaleVariation;
+                augmented.size = Math.max(10, Math.round(props.size * scaleFactor));
+            }
+            
+            // 절단 처리 (25% 이상 노출)
+            if (document.getElementById('enableTruncation').checked) {
+                const margin = augmented.size * 0.25;
+                augmented.x = Math.max(margin, Math.min(canvas.width - margin, augmented.x));
+                augmented.y = Math.max(margin, Math.min(canvas.height - margin, augmented.y));
+            }
+            
+            // 조명 변화
+            const lightingVariation = document.getElementById('lightingVariation').value / 100;
+            if (lightingVariation > 0) {
+                const lightingFactor = 1 + (Math.random() - 0.5) * lightingVariation;
+                augmented.opacity = Math.max(0.5, Math.min(1, props.opacity * lightingFactor));
+            }
+            
+            return augmented;
+        }
+
+        // 캔버스 다시 그리기
+        function redrawCanvas() {
+            if (!baseImage) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 배경 이미지 그리기
+            ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+            
+            // FOD들 그리기
+            fods.forEach(fod => {
+                drawFodWithBlending(fod);
+            });
+            
+            updatePreviews();
+        }
+
+        // 블렌딩과 함께 FOD 그리기
+        function drawFodWithBlending(fod) {
+            ctx.save();
+            
+            // 위치 설정
+            ctx.translate(fod.x, fod.y);
+            ctx.rotate(fod.rotation * Math.PI / 180);
+            
+            // 원근감 효과
+            let scaleY = 1;
+            if (document.getElementById('enablePerspective').checked) {
+                const perspectiveY = parseInt(document.getElementById('perspectiveY').value) / 100;
+                scaleY = 1 - (perspectiveY * (fod.y / canvas.height) * 0.5);
+                ctx.scale(1, scaleY);
+            }
+            
+            // 그림자 효과
+            if (document.getElementById('enableShadow').checked) {
+                const shadowIntensity = parseInt(document.getElementById('shadowIntensity').value) / 100;
+                const shadowDistance = parseInt(document.getElementById('shadowDistance').value);
+                
+                ctx.shadowColor = `rgba(0, 0, 0, ${shadowIntensity * 0.5})`;
+                ctx.shadowBlur = shadowDistance;
+                ctx.shadowOffsetX = shadowDistance * 0.5;
+                ctx.shadowOffsetY = shadowDistance * 0.5;
+            }
+            
+            // 조명 일치 효과
+            let brightness = 1;
+            if (document.getElementById('enableLightingMatch').checked) {
+                const lightingMatch = parseInt(document.getElementById('lightingMatch').value) / 100;
+                const yFactor = fod.y / canvas.height;
+                brightness = 1 + (lightingMatch * (0.5 - yFactor));
+                ctx.filter = `brightness(${brightness})`;
+            }
+            
+            // 지면 접촉 효과
+            if (document.getElementById('enableGroundContact').checked) {
+                const contactFactor = fod.y / canvas.height;
+                const compression = 1 - (contactFactor * 0.1);
+                ctx.scale(1, compression);
+            }
+            
+            // 블렌딩 적용
+            applyBlending(fod);
+            
+            // 투명도 적용
+            ctx.globalAlpha = fod.opacity;
+            
+            // FOD 이미지 그리기
+            const halfSize = fod.size / 2;
+            ctx.drawImage(fod.image, -halfSize, -halfSize, fod.size, fod.size);
+            
+            ctx.restore();
+        }
+
+        // 블렌딩 적용
+        function applyBlending(fod) {
+            const method = fod.blendingMethod;
+            const strength = fod.blendingStrength;
+            
+            switch (method) {
+                case 'gaussian':
+                    ctx.filter = `blur(${strength}px)`;
+                    break;
+                case 'alpha':
+                    ctx.globalCompositeOperation = 'multiply';
+                    break;
+                case 'feather':
+                    ctx.filter = `blur(${strength * 0.5}px)`;
+                    ctx.globalCompositeOperation = 'multiply';
+                    break;
+                case 'poisson':
+                    ctx.globalCompositeOperation = 'overlay';
+                    break;
+                case 'random':
+                    const methods = ['multiply', 'overlay', 'soft-light', 'hard-light'];
+                    ctx.globalCompositeOperation = methods[Math.floor(Math.random() * methods.length)];
+                    break;
+            }
+        }
+
+        // 미리보기 업데이트
+        function updatePreviews() {
+            if (selectedFodIndex < 0 || !baseImage) return;
+            
+            const fodData = fodImages[selectedFodIndex];
+            const size = 80;
+            
+            // 원본 미리보기
+            const originalCanvas = document.getElementById('previewOriginal');
+            const originalCtx = originalCanvas.getContext('2d');
+            originalCtx.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+            originalCtx.drawImage(fodData.image, 60, 35, size, size);
+            
+            // 그림자 미리보기
+            const shadowCanvas = document.getElementById('previewShadow');
+            const shadowCtx = shadowCanvas.getContext('2d');
+            shadowCtx.clearRect(0, 0, shadowCanvas.width, shadowCanvas.height);
+            shadowCtx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            shadowCtx.shadowBlur = 5;
+            shadowCtx.shadowOffsetX = 3;
+            shadowCtx.shadowOffsetY = 3;
+            shadowCtx.drawImage(fodData.image, 60, 35, size, size);
+            
+            // 실사 효과 미리보기
+            const realisticCanvas = document.getElementById('previewRealistic');
+            const realisticCtx = realisticCanvas.getContext('2d');
+            realisticCtx.clearRect(0, 0, realisticCanvas.width, realisticCanvas.height);
+            
+            // 실사 효과 적용
+            realisticCtx.save();
+            realisticCtx.translate(100, 75);
+            
+            // 원근감
+            if (document.getElementById('enablePerspective').checked) {
+                const perspectiveY = parseInt(document.getElementById('perspectiveY').value) / 100;
+                realisticCtx.scale(1, 1 - (perspectiveY * 0.5));
+            }
+            
+            // 그림자
+            if (document.getElementById('enableShadow').checked) {
+                const shadowIntensity = parseInt(document.getElementById('shadowIntensity').value) / 100;
+                const shadowDistance = parseInt(document.getElementById('shadowDistance').value);
+                realisticCtx.shadowColor = `rgba(0, 0, 0, ${shadowIntensity * 0.5})`;
+                realisticCtx.shadowBlur = shadowDistance;
+                realisticCtx.shadowOffsetX = shadowDistance * 0.5;
+                realisticCtx.shadowOffsetY = shadowDistance * 0.5;
+            }
+            
+            // 조명 일치
+            if (document.getElementById('enableLightingMatch').checked) {
+                const lightingMatch = parseInt(document.getElementById('lightingMatch').value) / 100;
+                realisticCtx.filter = `brightness(${1 + lightingMatch * 0.5})`;
+            }
+            
+            // 지면 접촉
+            if (document.getElementById('enableGroundContact').checked) {
+                realisticCtx.scale(1, 0.95);
+            }
+            
+            realisticCtx.drawImage(fodData.image, -size/2, -size/2, size, size);
+            realisticCtx.restore();
+        }
+
+        // 배치 생성
+        function generateBatch() {
+            if (fodImages.length === 0 || backgroundImages.length === 0) {
+                alert('FOD 이미지와 배경 이미지를 모두 업로드해주세요.');
+                return;
+            }
+            
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            const minObjects = parseInt(document.getElementById('minObjects').value);
+            const maxObjects = parseInt(document.getElementById('maxObjects').value);
+            
+            batchResults = [];
+            
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.style.display = 'block';
+            
+            let currentBatch = 0;
+            
+            function processBatch() {
+                if (currentBatch >= batchSize) {
+                    progressContainer.style.display = 'none';
+                    alert(`배치 생성 완료! ${batchSize}개의 이미지가 생성되었습니다.`);
+                    return;
+                }
+                
+                // 랜덤 배경 선택
+                const bgIndex = Math.floor(Math.random() * backgroundImages.length);
+                selectBackground(bgIndex);
+                
+                // 기존 FOD 삭제
+                fods = [];
+                
+                // 랜덤 객체 수 결정
+                const objectCount = Math.floor(Math.random() * (maxObjects - minObjects + 1)) + minObjects;
+                
+                // 랜덤 FOD 배치
+                for (let i = 0; i < objectCount; i++) {
+                    const fodIndex = Math.floor(Math.random() * fodImages.length);
+                    selectedFodIndex = fodIndex;
+                    
+                    const x = Math.random() * canvas.width;
+                    const y = Math.random() * canvas.height;
+                    
+                    addFodToCanvas(x, y);
+                }
+                
+                // 결과 저장
+                const imageData = canvas.toDataURL();
+                const annotations = generateYOLOAnnotations();
+                
+                batchResults.push({
+                    imageData: imageData,
+                    annotations: annotations,
+                    filename: `batch_${currentBatch + 1}.jpg`
+                });
+                
+                currentBatch++;
+                const progress = (currentBatch / batchSize) * 100;
+                progressFill.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+                
+                // 다음 배치 처리
+                setTimeout(processBatch, 100);
+            }
+            
+            processBatch();
+        }
+
+        // YOLO 형식 어노테이션 생성
+        function generateYOLOAnnotations() {
+            const annotations = [];
+            
+            fods.forEach(fod => {
+                const centerX = fod.x / canvas.width;
+                const centerY = fod.y / canvas.height;
+                const width = (fod.size / canvas.width);
+                const height = (fod.size / canvas.height);
+                
+                annotations.push(`${fod.classId} ${centerX.toFixed(6)} ${centerY.toFixed(6)} ${width.toFixed(6)} ${height.toFixed(6)}`);
+            });
+            
             return annotations.join('\n');
         }
 
-        // 클래스 정보 파일 생성
-        function generateClassNames() {
-            const classNames = [];
-            fodImages.forEach(fodData => {
-                const classId = classIds[fodData.id];
-                classNames[classId] = fodData.name.replace('.jpg', '').replace('.png', '').replace('.jpeg', '');
-            });
-            return classNames.join('\n');
-        }
-
-        // 데이터셋 다운로드 (이미지 + annotation)
-        // 데이터셋 다운로드
-        function downloadDataset() {
-            if (!baseImage) {
-                alert('먼저 도로 이미지를 업로드하세요!');
-                return;
+        // 모든 FOD 삭제
+        function clearAllFODs() {
+            fods = [];
+            for (const fodId in fodCounts) {
+                fodCounts[fodId] = 0;
             }
-
-            if (fods.length === 0) {
-                alert('배치된 FOD가 없습니다!');
-                return;
-            }
-
-            const timestamp = new Date().getTime();
-            const baseName = `fod_synthesis_${timestamp}`;
-
-            // 이미지 다운로드 (PNG로 변경)
-            const imgLink = document.createElement('a');
-            imgLink.download = `${baseName}.png`; // PNG 확장자로 변경
-            imgLink.href = canvas.toDataURL('image/png'); // PNG 형식으로 내보내기
-            imgLink.click();
-
-            // annotation 파일 다운로드
-            const annotation = generateYOLOAnnotation();
-            const annotationBlob = new Blob([annotation], { type: 'text/plain' });
-            const annotationLink = document.createElement('a');
-            annotationLink.download = `${baseName}.txt`;
-            annotationLink.href = URL.createObjectURL(annotationBlob);
-            annotationLink.click();
-
-            // 클래스 정보 파일 다운로드
-            const classNames = generateClassNames();
-            const classBlob = new Blob([classNames], { type: 'text/plain' });
-            const classLink = document.createElement('a');
-            classLink.download = `classes.txt`;
-            classLink.href = URL.createObjectURL(classBlob);
-            classLink.click();
-
-            alert('데이터셋이 다운로드되었습니다:\n- 합성 이미지 (PNG)\n- YOLO annotation 파일\n- 클래스 정보 파일');
+            updateFodStats();
+            redrawCanvas();
         }
 
         // 이미지 다운로드
         function downloadImage() {
             if (!baseImage) {
-                alert('먼저 도로 이미지를 업로드하세요!');
+                alert('배경 이미지를 먼저 업로드하세요.');
                 return;
             }
             
             const link = document.createElement('a');
-            link.download = `fod_synthesis_${new Date().getTime()}.png`;
+            link.download = `fod_synthesis_${Date.now()}.jpg`;
             link.href = canvas.toDataURL();
             link.click();
         }
 
+        // 데이터셋 다운로드
+        function downloadDataset() {
+            if (!baseImage || fods.length === 0) {
+                alert('배경 이미지와 FOD를 추가한 후 다운로드하세요.');
+                return;
+            }
+            
+            const zip = new JSZip();
+            const timestamp = Date.now();
+            
+            // 이미지 추가
+            const imageData = canvas.toDataURL().split(',')[1];
+            zip.file(`image_${timestamp}.jpg`, imageData, { base64: true });
+            
+            // 어노테이션 추가
+            const annotations = generateYOLOAnnotations();
+            zip.file(`image_${timestamp}.txt`, annotations);
+            
+            // 클래스 파일 추가
+            const classNames = Object.keys(uniqueClasses).join('\n');
+            zip.file('classes.txt', classNames);
+            
+            // 다운로드
+            zip.generateAsync({ type: 'blob' }).then(function(content) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = `fod_dataset_${timestamp}.zip`;
+                link.click();
+            });
+        }
+
+        // 배치 다운로드
+        function downloadBatch() {
+            if (batchResults.length === 0) {
+                alert('배치를 먼저 생성하세요.');
+                return;
+            }
+            
+            const zip = new JSZip();
+            const timestamp = Date.now();
+            
+            // 이미지들과 어노테이션 추가
+            batchResults.forEach((result, index) => {
+                const imageData = result.imageData.split(',')[1];
+                zip.file(`images/${result.filename}`, imageData, { base64: true });
+                zip.file(`labels/${result.filename.replace('.jpg', '.txt')}`, result.annotations);
+            });
+            
+            // 클래스 파일 추가
+            const classNames = Object.keys(uniqueClasses).join('\n');
+            zip.file('classes.txt', classNames);
+            
+            // 데이터셋 설정 파일 추가
+            const datasetConfig = `
+train: images/
+val: images/
+test: images/
+
+nc: ${Object.keys(uniqueClasses).length}
+names: [${Object.keys(uniqueClasses).map(name => `'${name}'`).join(', ')}]
+            `;
+            zip.file('dataset.yaml', datasetConfig);
+            
+            // 다운로드
+            zip.generateAsync({ type: 'blob' }).then(function(content) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = `fod_batch_dataset_${timestamp}.zip`;
+                link.click();
+            });
+        }
+
+        // 드래그 앤 드롭 설정
+        function setupDragDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fodUploadArea = document.getElementById('fodUploadArea');
+            
+            // 배경 이미지 드래그 앤 드롭
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = Array.from(e.dataTransfer.files);
+                const imageFiles = files.filter(file => file.type.startsWith('image/'));
+                
+                if (imageFiles.length > 0) {
+                    const fakeEvent = { target: { files: imageFiles } };
+                    handleBackgroundUpload(fakeEvent);
+                }
+            });
+            
+            // FOD 이미지 드래그 앤 드롭
+            fodUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fodUploadArea.classList.add('dragover');
+            });
+            
+            fodUploadArea.addEventListener('dragleave', () => {
+                fodUploadArea.classList.remove('dragover');
+            });
+            
+            fodUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fodUploadArea.classList.remove('dragover');
+                
+                const files = Array.from(e.dataTransfer.files);
+                const imageFiles = files.filter(file => file.type.startsWith('image/'));
+                
+                if (imageFiles.length > 0) {
+                    const fakeEvent = { target: { files: imageFiles } };
+                    handleFodImageUpload(fakeEvent);
+                }
+            });
+        }
+
         // 초기화
-        redrawCanvas();
-        updateClassMapping();
+        function initialize() {
+            setupEventListeners();
+            setupDragDrop();
+            updateSliderDisplays();
+            updateFodStats();
+            updateClassMapping();
+            
+            // 캔버스 초기 설정
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#999';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('배경 이미지를 업로드하세요', canvas.width / 2, canvas.height / 2);
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', initialize);
     </script>
 </body>
 </html>
